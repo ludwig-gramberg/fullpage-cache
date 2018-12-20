@@ -131,7 +131,7 @@ class CacheService {
 			echo '<!--FPC:'.$tag.'-->';
 		}
 		if($renderContent) {
-			call_user_func($contentCallback);
+			call_user_func_array($contentCallback, [$this->isCacheClient]);
 		}
 		if($this->isCacheClient) {
 			echo '<!--/FPC:'.$tag.'-->';
