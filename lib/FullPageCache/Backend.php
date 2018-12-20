@@ -1,7 +1,8 @@
 <?php
-namespace Lg\FullPageCache;
+namespace FullPageCache;
 
-use Lg\FullPageCache\Backend\Stats;
+use FullPageCache\BackendStats;
+use Webframework\Request\Request;
 
 class Backend {
 
@@ -48,15 +49,16 @@ class Backend {
 	const COMPRESSION_TYPE_GZIP = 'gz';
 	const COMPRESSION_TYPE_NONE = 'rv';
 
-	/**
-	 * @param string $redisHost
-	 * @param int $redisPort
-	 * @param float $redisTimeout
-	 * @param null $redisAuth
-	 * @param int $bzCompressionLevel
-	 * @param int $minCompressionByteSize
-	 */
-	public function __construct($redisHost = '127.0.0.1', $redisPort = 6379, $redisTimeout = 1.0, $redisAuth = null, $bzCompressionLevel = 7, $minCompressionByteSize = 2048) {
+    /**
+     * Backend constructor.
+     * @param string $redisHost
+     * @param int $redisPort
+     * @param float $redisTimeout
+     * @param string|null $redisAuth
+     * @param int $bzCompressionLevel
+     * @param int $minCompressionByteSize
+     */
+	public function __construct(string $redisHost = '127.0.0.1', int $redisPort = 6379, float $redisTimeout = 1.0, string $redisAuth = null, int $bzCompressionLevel = 7, int $minCompressionByteSize = 2048) {
 
 		$this->redisHost = $redisHost;
 		$this->redisPort = $redisPort;
@@ -71,7 +73,7 @@ class Backend {
 	/**
 	 * @return \Credis_Client
 	 */
-	protected function getConnection() {
+	protected function getConnection(): \Credis_Client {
 		if(!$this->redisConnection) {
 			$this->redisConnection = new \Credis_Client($this->redisHost, $this->redisPort, $this->redisTimeout, '', 0, $this->redisAuth);
 		}
@@ -79,36 +81,10 @@ class Backend {
 	}
 
 	/**
-	 * returns possible permutations of parameters for a request
-	 *
-	 * @param $requestKey
-	 * @return array|null
+	 * @param string $requestKey
+	 * @return Page|null
 	 */
-	public function getParamOptions($requestKey) {
-		try {
-			$connection = $this->getConnection();
-			$paramsCacheKey = self::CACHE_KEY_PARAMS_.$requestKey;
-
-			$paramsDataJson = $connection->get($paramsCacheKey);
-
-			if($paramsDataJson) {
-				$paramsOptions = json_decode($paramsDataJson);
-				if(is_array($paramsOptions)) {
-					return $paramsOptions;
-				}
-			}
-
-		} catch(\Exception $e) {
-			error_log((string)$e);
-		}
-		return null;
-	}
-
-	/**
-	 * @param $requestKey
-	 * @return Page
-	 */
-	public function getPage($requestKey) {
+	public function getPage(string $requestKey): ?Page {
 		try {
 			$connection = $this->getConnection();
 			$pageCacheKey = self::CACHE_KEY_PAGE_.$requestKey;
@@ -149,23 +125,21 @@ class Backend {
 
 	const CACHE_KEY_LIST    = 'list';
 	const CACHE_KEY_QUEUE   = 'queue';
-	const CACHE_KEY_PARAMS_ = 'params_';
 	const CACHE_KEY_PAGE_   = 'page_';
 
 	/**
 	 * @param Request $request
 	 * @param string $pageKey
 	 * @param int $refreshInterval
-	 * @param array $paramsOptions
 	 * @param array $responseHeaders
 	 */
-	public function registerPage(Request $request, $pageKey, $refreshInterval, array $paramsOptions, array $responseHeaders) {
+	public function registerPage(Request $request, $pageKey, $refreshInterval, array $responseHeaders): void {
 		try {
 			$connection = $this->getConnection();
-			$requestKey = $request->getRequestKey();
+			$requestKey = $this->getRequestKey($request);
 
 			$queueData = new \stdClass();
-			$queueData->url = $request->getUrl();
+			$queueData->url = (string)$request;
 			$queueData->refreshInterval = $refreshInterval;
 			$queueData->pageKey = $pageKey;
 			$queueData->requestKey = $requestKey;
@@ -187,15 +161,6 @@ class Backend {
 			 */
 			$connection->hSetNx(self::CACHE_KEY_LIST, $requestKey, $queueDataJson);
 
-			$paramsCacheKey = self::CACHE_KEY_PARAMS_.$request->getRequestKey(false);
-			$paramsDataJson = json_encode($paramsOptions, $this->jsonOptions);
-
-			/**
-			 * we store all possible parameter combinations for each base-request (without params)
-			 * so later we can quickly look them up
-			 */
-			$connection->set($paramsCacheKey, $paramsDataJson);
-
 		} catch(\Exception $e) {
 			error_log((string)$e);
 		}
@@ -207,7 +172,7 @@ class Backend {
 	 * @param int $expireInterval
 	 * @param string $responseBody
 	 */
-	public function storePage($requestKey, $refreshInterval, $expireInterval, $responseBody) {
+	public function storePage($requestKey, $refreshInterval, $expireInterval, $responseBody): void {
 		try {
 			$connection = $this->getConnection();
 
@@ -237,9 +202,9 @@ class Backend {
 	}
 
 	/**
-	 * @param $requestKey
+	 * @param string $requestKey
 	 */
-	public function removePage($requestKey) {
+	public function removePage(string $requestKey): void {
 		try {
 			$connection = $this->getConnection();
 
@@ -263,7 +228,7 @@ class Backend {
 	/**
 	 * @return array
 	 */
-	public function getPagesToRefresh() {
+	public function getPagesToRefresh(): array {
 		try {
 			$connection = $this->getConnection();
 			$pageList = $connection->zRangeByScore(self::CACHE_KEY_QUEUE, 0, time());
@@ -280,7 +245,7 @@ class Backend {
 	 * @param array $requestKeys
 	 * @return array
 	 */
-	public function getPagesMetaData(array $requestKeys) {
+	public function getPagesMetaData(array $requestKeys): array {
 		if(empty($requestKeys)) {
 			return array();
 		}
@@ -306,20 +271,19 @@ class Backend {
 	/**
 	 * flush entire cache
 	 */
-	public function flush() {
+	public function flush(): void {
 		try {
 			$connection = $this->getConnection();
 			$connection->flushAll();
 		} catch(\Exception $e) {
 			error_log((string)$e);
 		}
-		return array();
 	}
 
 	/**
 	 * set all pages to be refreshed by the cache worker
 	 */
-	public function refreshAll() {
+	public function refreshAll(): void {
 		try {
 			$connection = $this->getConnection();
 			$keys = $connection->hKeys(self::CACHE_KEY_LIST);
@@ -329,13 +293,12 @@ class Backend {
 		} catch(\Exception $e) {
 			error_log((string)$e);
 		}
-		return array();
 	}
 
 	/**
-	 * @return Stats
+	 * @return BackendStats|null
 	 */
-	public function getStats() {
+	public function getStats(): ?BackendStats {
 		try {
 			$connection = $this->getConnection();
 
@@ -344,12 +307,24 @@ class Backend {
 
 			$keys = $connection->hKeys(self::CACHE_KEY_LIST);
 
-			$stats = new Stats(count($keys), $memory);
+			$stats = new BackendStats(count($keys), $memory);
 			return $stats;
 
 		} catch(\Exception $e) {
 			error_log((string)$e);
 		}
-		return array();
+		return null;
 	}
+
+    /**
+     * example: https_www.domain.com_my-path-xyz
+     * @return string
+     */
+    public function getRequestKey(Request $request): string {
+        $requestKey = array();
+        $requestKey[] = $request->getScheme();
+        $requestKey[] = $request->getHost();
+        $requestKey[] = str_replace('/', '-', trim($request->getRequestPathFlat(), '/'));
+        return implode('_', $requestKey);
+    }
 }

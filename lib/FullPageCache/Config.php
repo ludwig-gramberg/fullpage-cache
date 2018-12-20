@@ -1,5 +1,5 @@
 <?php
-namespace Lg\FullPageCache;
+namespace FullPageCache;
 
 class Config {
 
@@ -40,7 +40,7 @@ class Config {
 	/**
 	 * @var array
 	 */
-	protected $protocols = array();
+	protected $schemes = array();
 
 	/**
 	 * @var array
@@ -63,24 +63,17 @@ class Config {
 	protected $postProcessCallback;
 
 	/**
-	 * @var Backend
-	 */
-	protected $backend;
-
-	/**
 	 * Config constructor.
 	 *
-	 * @param Backend $backend
 	 * @param array $domains
-	 * @param array $protocols
+	 * @param array $schemes
 	 * @param int $defaultRefreshInterval
 	 * @param int $expireInterval
 	 * @param int $cacheClientFetchTimeout
 	 */
-	public function __construct(Backend $backend, array $domains, array $protocols, $defaultRefreshInterval = 600, $expireInterval = 600, $cacheClientFetchTimeout = 30) {
-		$this->backend = $backend;
+	public function __construct(array $domains, array $schemes, $defaultRefreshInterval = 600, $expireInterval = 600, $cacheClientFetchTimeout = 30) {
 		$this->domains = $domains;
-		$this->protocols = $protocols;
+		$this->schemes = $schemes;
 		$this->defaultRefreshInterval = $defaultRefreshInterval;
 		$this->expireInterval = $expireInterval;
 		$this->cacheClientFetchTimeout = $cacheClientFetchTimeout;
@@ -89,175 +82,161 @@ class Config {
 	/**
 	 * @return bool
 	 */
-	public function isCacheClientIgnoreSslErrors() {
+	public function isCacheClientIgnoreSslErrors(): bool {
 		return $this->cacheClientIgnoreSslErrors;
 	}
 
 	/**
 	 * @param bool $cacheClientIgnoreSslErrors
 	 */
-	public function setCacheClientIgnoreSslErrors( $cacheClientIgnoreSslErrors ) {
+	public function setCacheClientIgnoreSslErrors(bool $cacheClientIgnoreSslErrors): void {
 		$this->cacheClientIgnoreSslErrors = $cacheClientIgnoreSslErrors;
-	}
-
-	/**
-	 * @return Backend
-	 */
-	public function getBackend() {
-		return $this->backend;
-	}
-
-	/**
-	 * @param Backend $backend
-	 */
-	public function setBackend(Backend $backend) {
-		$this->backend = $backend;
 	}
 
 	/**
 	 * @return array
 	 */
-	public function getDomains() {
+	public function getDomains(): array {
 		return $this->domains;
 	}
 
 	/**
 	 * @param array $domains
 	 */
-	public function setDomains(array $domains) {
+	public function setDomains(array $domains): void {
 		$this->domains = $domains;
 	}
 
 	/**
 	 * @return array
 	 */
-	public function getProtocols() {
-		return $this->protocols;
+	public function getSchemes(): array {
+		return $this->schemes;
 	}
 
 	/**
-	 * @param array $protocols
+	 * @param array $schemes
 	 */
-	public function setProtocols(array $protocols) {
-		$this->protocols = $protocols;
+	public function setSchemes(array $schemes): void {
+		$this->schemes = $schemes;
 	}
 
 	/**
 	 * @return array
 	 */
-	public function getStateTags() {
+	public function getStateTags(): array {
 		return $this->stateTags;
 	}
 
 	/**
 	 * @param array $stateTags
 	 */
-	public function setStateTags(array $stateTags) {
+	public function setStateTags(array $stateTags): void {
 		$this->stateTags = $stateTags;
 	}
 
 	/**
 	 * @param string $stateTag
 	 */
-	public function addStateTag($stateTag) {
+	public function addStateTag($stateTag): void {
 		$this->stateTags[] = $stateTag;
 	}
 
 	/**
 	 * @param callable $useCacheCallback
 	 */
-	public function setUseCacheCallback(callable $useCacheCallback) {
+	public function setUseCacheCallback(callable $useCacheCallback): void {
 		$this->useCacheCallback = $useCacheCallback;
 	}
 
 	/**
 	 * @return bool
 	 */
-	public function hasUseCacheCallback() {
+	public function hasUseCacheCallback(): bool {
 		return is_callable($this->useCacheCallback);
 	}
 
 	/**
 	 * @return callable
 	 */
-	public function getUseCacheCallback() {
+	public function getUseCacheCallback(): callable {
 		return $this->useCacheCallback;
 	}
 
 	/**
 	 * @return callable
 	 */
-	public function getProcessTagsCallback() {
+	public function getProcessTagsCallback(): callable {
 		return $this->processTagsCallback;
 	}
 
 	/**
 	 * @return bool
 	 */
-	public function hasProcessTagsCallback() {
+	public function hasProcessTagsCallback(): bool {
 		return is_callable($this->processTagsCallback);
 	}
 
 	/**
 	 * @param callable $processTagsCallback
 	 */
-	public function setProcessTagsCallback(callable $processTagsCallback) {
+	public function setProcessTagsCallback(callable $processTagsCallback): void {
 		$this->processTagsCallback = $processTagsCallback;
 	}
 
 	/**
 	 * @return callable
 	 */
-	public function getPostProcessCallback() {
+	public function getPostProcessCallback(): callable {
 		return $this->postProcessCallback;
 	}
 
 	/**
 	 * @return bool
 	 */
-	public function hasPostProcessCallback() {
+	public function hasPostProcessCallback(): bool {
 		return is_callable($this->postProcessCallback);
 	}
 
 	/**
 	 * @param callable $postProcessCallback
 	 */
-	public function setPostProcessCallback(callable $postProcessCallback) {
+	public function setPostProcessCallback(callable $postProcessCallback): void {
 		$this->postProcessCallback = $postProcessCallback;
 	}
 
 	/**
 	 * @return int
 	 */
-	public function getDefaultRefreshInterval() {
+	public function getDefaultRefreshInterval(): int {
 		return $this->defaultRefreshInterval;
 	}
 
 	/**
 	 * @param array $defaultResponseHeaders
 	 */
-	public function setDefaultResponseHeaders(array $defaultResponseHeaders) {
+	public function setDefaultResponseHeaders(array $defaultResponseHeaders): void {
 		$this->defaultResponseHeaders = $defaultResponseHeaders;
 	}
 
 	/**
 	 * @return array
 	 */
-	public function getDefaultResponseHeaders() {
+	public function getDefaultResponseHeaders(): array {
 		return $this->defaultResponseHeaders;
 	}
 
 	/**
 	 * @return int
 	 */
-	public function getExpireInterval() {
+	public function getExpireInterval(): int {
 		return $this->expireInterval;
 	}
 
 	/**
 	 * @return int
 	 */
-	public function getCacheClientFetchTimeout() {
+	public function getCacheClientFetchTimeout(): int {
 		return $this->cacheClientFetchTimeout;
 	}
 

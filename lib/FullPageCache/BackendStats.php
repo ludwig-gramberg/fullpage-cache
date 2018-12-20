@@ -1,7 +1,7 @@
 <?php
-namespace Lg\FullPageCache\Backend;
+namespace FullPageCache;
 
-class Stats {
+class BackendStats {
 
 	/**
 	 * @var int
@@ -19,7 +19,7 @@ class Stats {
 	 * @param int $numberOfPages
 	 * @param int $memoryBytes
 	 */
-	public function __construct( $numberOfPages, $memoryBytes ) {
+	public function __construct(int $numberOfPages, int $memoryBytes) {
 		$this->numberOfPages = $numberOfPages;
 		$this->memoryBytes = $memoryBytes;
 	}
@@ -27,14 +27,14 @@ class Stats {
 	/**
 	 * @return int
 	 */
-	public function getNumberOfPages() {
+	public function getNumberOfPages(): int {
 		return $this->numberOfPages;
 	}
 
 	/**
 	 * @return int
 	 */
-	public function getMemoryBytes() {
+	public function getMemoryBytes(): int {
 		return $this->memoryBytes;
 	}
 }

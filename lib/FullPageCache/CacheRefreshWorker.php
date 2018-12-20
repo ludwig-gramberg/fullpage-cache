@@ -1,12 +1,14 @@
 <?php
-namespace Lg\FullPageCache\Worker;
+namespace FullPageCache\Worker;
 
-use Lg\FullPageCache\Backend;
-use Lg\FullPageCache\Config;
+use FullPageCache\Backend;
+use FullPageCache\Config;
+use Webframework\FileSystem\File;
+use Webframework\Worker\AbstractWorker;
 
-class CacheRefresh extends AbstractWorker {
+class CacheRefreshWorker extends AbstractWorker {
 
-    const USER_AGENT = 'lg-fpc-cache-refresh-worker';
+    const USER_AGENT = 'fullpage-cache-refresh-worker';
 
 	/**
 	 * @var Backend
@@ -38,24 +40,55 @@ class CacheRefresh extends AbstractWorker {
 	 */
     protected $multiCurl;
 
+    /**
+     * @var File
+     */
+    protected $deploymentHashFile;
+
+    /**
+     * @var string
+     */
+    protected $deploymentHash;
+
 	/**
 	 * CacheRefresh constructor.
 	 *
 	 * @param Config $config
+     * @param Backend $backend
 	 * @param string $name
 	 * @param int|null $workInterval
 	 * @param int|null $deploymentHashFile
 	 * @param null $memoryLimit
 	 * @param null $timeLimit
 	 */
-	public function __construct(Config $config, $name, $workInterval, $deploymentHashFile, $memoryLimit = null, $timeLimit = null ) {
-		$this->backend = $config->getBackend();
+	public function __construct(Config $config, Backend $backend, string $name, double $workInterval, File $deploymentHashFile = null, $memoryLimit = null, $timeLimit = null) {
 		$this->config = $config;
+		$this->backend = $backend;
 		$this->expireInterval = $this->config->getExpireInterval();
-		parent::__construct( $name, $workInterval, $deploymentHashFile, $memoryLimit, $timeLimit );
+		parent::__construct($name, $workInterval, $memoryLimit, $timeLimit);
 	}
 
-	protected function init() {
+    /**
+     * @return bool
+     */
+	protected function detectDeployment(): bool {
+	    if(!$this->deploymentHashFile) {
+	        return false;
+        }
+        // intial hash read
+        if($this->deploymentHash === null) {
+            $this->deploymentHash = $this->deploymentHashFile->getContent();
+        }
+        // hash differs from before
+        if($this->deploymentHash != $this->deploymentHashFile->getContent()) {
+            return true;
+        }
+        // store last hash
+        $this->deploymentHash = $this->deploymentHashFile->getContent();
+        return false;
+    }
+
+    protected function init() {
 		$this->multiCurl = curl_multi_init();
 	}
 

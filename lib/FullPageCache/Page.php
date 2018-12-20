@@ -1,5 +1,5 @@
 <?php
-namespace Lg\FullPageCache;
+namespace FullPageCache;
 
 class Page {
 
@@ -35,7 +35,7 @@ class Page {
 	 * @param string $body
 	 * @param array $headers
 	 */
-	public function __construct($key, $body, array $headers) {
+	public function __construct(string $key, string $body, array $headers) {
 		$this->key             = $key;
 		$this->body            = $body;
 		$this->headers         = $headers;
@@ -44,39 +44,42 @@ class Page {
 	/**
 	 * @return string
 	 */
-	public function getKey() {
+	public function getKey(): string {
 		return $this->key;
 	}
 
 	/**
 	 * @return string
 	 */
-	public function getBody() {
+	public function getBody(): string {
 		return $this->body;
 	}
 
 	/**
 	 * @param string $body
 	 */
-	public function setBody($body) {
+	public function setBody(string $body): void {
 		$this->body = $body;
 	}
 
 	/**
 	 * @return array
 	 */
-	public function getHeaders() {
+	public function getHeaders(): array {
 		return $this->headers;
 	}
 
 	/**
 	 * @param array $headers
 	 */
-	public function setHeaders(array $headers) {
+	public function setHeaders(array $headers): void {
 		$this->headers = $headers;
 	}
 
-	public function sendResponse() {
+    /**
+     *
+     */
+	public function sendResponse(): void {
 		header('X-FPC-Key:'.$this->key, true);
 		foreach($this->headers as $header) {
 			header($header, true);
