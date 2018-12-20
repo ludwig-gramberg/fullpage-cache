@@ -1,8 +1,6 @@
 <?php
-namespace FullPageCache\Worker;
+namespace FullPageCache;
 
-use FullPageCache\Backend;
-use FullPageCache\Config;
 use Webframework\FileSystem\File;
 use Webframework\Worker\AbstractWorker;
 

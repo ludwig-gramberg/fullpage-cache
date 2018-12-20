@@ -36,7 +36,7 @@ class CacheService {
      * @param Backend $backend
      * @param Request $request
      */
-	protected function __construct(Config $config, Backend $backend, Request $request) {
+	public function __construct(Config $config, Backend $backend, Request $request) {
 	    $this->request = $request;
 		$this->config = $config;
 		$this->backend = $backend;
@@ -61,7 +61,7 @@ class CacheService {
 
 		// allowed host names
 		$allowedHostNames = $this->config->getDomains();
-		if(!in_array($this->request->getDomain(), $allowedHostNames)) {
+		if(!in_array($this->request->getHost(), $allowedHostNames)) {
 			return null;
 		}
 
