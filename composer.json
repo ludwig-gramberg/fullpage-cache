@@ -1,0 +1,34 @@
+{
+    "name": "ludwig-gramberg/fullpage-cache",
+    "description": "Fullpage Cache",
+    "type": "library",
+    "license": "proprietary",
+    "homepage": "https://www.ludwig-gramberg.de/",
+    "authors": [
+        {
+            "name": "Ludwig Gramberg",
+            "homepage": "https://www.ludwig-gramberg.de/",
+            "email": "info@ludwig-gramberg.de",
+            "role": "Project Founder"
+        }
+    ],
+    "minimum-stability" : "stable",
+    "require": {
+        "php" : ">=7.2.0",
+        "ext-json" : "*",
+        "ext-pdo" : "*",
+        "ext-curl" : "*",
+        "ludwig-gramberg/webframework" : "dev-master"
+    },
+    "autoload": {
+        "psr-0": {
+            "FullPageCache\\": ["lib/"]
+        }
+    },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../webframework"
+        }
+    ]
+}
