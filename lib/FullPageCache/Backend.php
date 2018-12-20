@@ -1,7 +1,6 @@
 <?php
 namespace FullPageCache;
 
-use FullPageCache\BackendStats;
 use Webframework\Request\Request;
 
 class Backend {

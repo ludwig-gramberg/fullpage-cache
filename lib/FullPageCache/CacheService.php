@@ -1,6 +1,8 @@
 <?php
 namespace FullPageCache;
 
+use Webframework\Request\Request;
+
 class CacheService {
 
 	/**
@@ -26,7 +28,7 @@ class CacheService {
 	/**
 	 * @var array
 	 */
-	protected $renderTags = array();
+	protected $renderTags;
 
     /**
      * CacheService constructor.
@@ -38,9 +40,6 @@ class CacheService {
 	    $this->request = $request;
 		$this->config = $config;
 		$this->backend = $backend;
-		if($this->config->hasProcessTagsCallback()) {
-			$this->renderTags = call_user_func($this->config->getProcessTagsCallback());
-		}
 		$this->isCacheClient = $this->request->getUserAgent() == CacheRefreshWorker::USER_AGENT;
 	}
 
@@ -93,6 +92,18 @@ class CacheService {
 		return $page;
 	}
 
+    /**
+     * @return bool
+     */
+	protected function shouldRenderTag(string $tag): bool {
+	    if($this->renderTags === null) {
+            $this->renderTags = $this->config->hasProcessTagsCallback()
+                ? call_user_func($this->config->getProcessTagsCallback())
+                : [];
+        }
+        return in_array($tag, $this->renderTags);
+    }
+
 	/**
 	 * @param Page $page
 	 */
@@ -101,7 +112,7 @@ class CacheService {
 		preg_match_all('/\<!\-\-FPC:(.+)\-\-\>/U', $body, $m);
 		foreach($m[1] as $bodyTag) {
 			$bodyTagQuoted = preg_quote($bodyTag);
-			if(in_array($bodyTag, $this->renderTags)) {
+			if($this->shouldRenderTag($bodyTag)) {
 				$body = preg_replace('/\<!\-\-(\/)?FPC:'.$bodyTagQuoted.'\-\-\>/', '', $body);
 			} else {
 				$body = preg_replace('/\<!\-\-FPC:'.$bodyTagQuoted.'\-\-\>(.*)\<!\-\-\/FPC:'.$bodyTagQuoted.'\-\-\>/sU', '', $body);
@@ -115,15 +126,14 @@ class CacheService {
 	 * @param callable $contentCallback
 	 */
 	public function renderTag($tag, callable $contentCallback): void {
-		$renderTags = $this->isCacheClient;
-		$renderContent = $renderTags || in_array($tag, $this->renderTags);
-		if($renderTags) {
+		$renderContent = $this->isCacheClient || $this->shouldRenderTag($tag);
+		if($this->isCacheClient) {
 			echo '<!--FPC:'.$tag.'-->';
 		}
 		if($renderContent) {
 			call_user_func($contentCallback);
 		}
-		if($renderTags) {
+		if($this->isCacheClient) {
 			echo '<!--/FPC:'.$tag.'-->';
 		}
 	}
@@ -166,4 +176,11 @@ class CacheService {
 	public function getStats(): ?BackendStats {
 		return $this->backend->getStats();
 	}
+
+    /**
+     * @return Config
+     */
+    public function getConfig(): Config {
+        return $this->config;
+    }
 }
