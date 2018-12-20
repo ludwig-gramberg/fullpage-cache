@@ -4,7 +4,7 @@ namespace FullPageCache;
 use Webframework\FileSystem\File;
 use Webframework\Worker\AbstractWorker;
 
-class CacheRefreshWorker extends AbstractWorker {
+class CacheWorker extends AbstractWorker {
 
     const USER_AGENT = 'fullpage-cache-refresh-worker';
 
@@ -54,12 +54,12 @@ class CacheRefreshWorker extends AbstractWorker {
 	 * @param Config $config
      * @param Backend $backend
 	 * @param string $name
-	 * @param int|null $workInterval
-	 * @param int|null $deploymentHashFile
+	 * @param float $workInterval
+	 * @param File|null $deploymentHashFile
 	 * @param null $memoryLimit
 	 * @param null $timeLimit
 	 */
-	public function __construct(Config $config, Backend $backend, string $name, double $workInterval, File $deploymentHashFile = null, $memoryLimit = null, $timeLimit = null) {
+	public function __construct(Config $config, Backend $backend, string $name, float $workInterval, File $deploymentHashFile = null, $memoryLimit = null, $timeLimit = null) {
 		$this->config = $config;
 		$this->backend = $backend;
 		$this->expireInterval = $this->config->getExpireInterval();

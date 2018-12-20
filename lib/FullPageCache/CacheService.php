@@ -40,7 +40,7 @@ class CacheService {
 	    $this->request = $request;
 		$this->config = $config;
 		$this->backend = $backend;
-		$this->isCacheClient = $this->request->getUserAgent() == CacheRefreshWorker::USER_AGENT;
+		$this->isCacheClient = $this->request->getUserAgent() == CacheWorker::USER_AGENT;
 	}
 
 	/**
