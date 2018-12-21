@@ -8,19 +8,28 @@ use Webframework\Application\Settings;
 
 $usageHelp = <<<HELP
 
-usage: php fpc-worker.php [-h] [-v] -d=<path>
+usage: php fpc-worker.php [-h] [-v] -d=<path> <command>
   -h show this help
   -v verbose, print extra output and errors
   -d=<path> app-directory, must point to project root 
 
+<command>
+  stats     show cache stats
+  flush     flush entire cache (reset cache)
+  refresh   request cache to refresh all pages
+
 example:
-  php fpc-worker.php -d=/var/www/html
+  php fpc-worker.php -d=/var/www/html -- stats
 
 HELP;
 
 // options
 
-$options = getopt('hvd::');
+$commands = null;
+$options = getopt('hvd::', [], $commands);
+$commands = array_slice($argv, $commands);
+$command = !empty($commands) ? $commands[0] : null;
+
 $showHelp = array_key_exists('h', $options);
 $isVerbose = array_key_exists('v', $options);
 $appDirectory = array_key_exists('d', $options) ? $options['d'] : null;
@@ -46,14 +55,26 @@ try {
     $settings = new Settings([$pathIniApplication, $pathIniCli, $pathIniResources]);
     $di = new DependencyManager($settings);
 
-    // prep worker
-    $config = $di->getInstance('FullPageCache\\Config'); /* @var $config Config */
+    // prep backend
     $backend = $di->getInstance('FullPageCache\\Backend'); /* @var $backend Backend */
 
-    // init worker
-    $worker = new CacheWorker($config, $backend, 'fpc-cache-worker-'.getmypid(), .2, null, 128);
-    $worker->run();
-    $worker->shutdown();
+    switch($command) {
+        case 'stats' :
+            $stats = $backend->getStats();
+            echo "cache size: ".number_format($stats->getMemoryBytes()/1024,0,'','')." KiB\n";
+            echo "pages stored: ".$stats->getNumberOfPages()."\n";
+            break;
+            
+        case 'flush' :
+            $backend->flush();
+            echo "cache flushed\n";
+            break;
+
+        case 'refresh' :
+            $backend->refreshAll();
+            echo "cache refresh requested\n";
+            break;
+    }
 
 } catch(\Throwable $e) {
 
