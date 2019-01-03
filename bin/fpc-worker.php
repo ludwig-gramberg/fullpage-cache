@@ -8,13 +8,13 @@ use Webframework\Application\Settings;
 
 $usageHelp = <<<HELP
 
-usage: php fpc-worker.php [-h] [-v] -d=<path>
+usage: php fpc-worker.php [-h] [-v] [-d=<path>]
   -h show this help
   -v verbose, print extra output and errors
   -d=<path> app-directory, must point to project root 
 
 example:
-  php fpc-worker.php -d=/var/www/html
+  php fpc-worker.php
 
 HELP;
 
@@ -24,6 +24,11 @@ $options = getopt('hvd::');
 $showHelp = array_key_exists('h', $options);
 $isVerbose = array_key_exists('v', $options);
 $appDirectory = array_key_exists('d', $options) ? $options['d'] : null;
+
+if(!$appDirectory) {
+    // guess path if none was provided
+    $appDirectory = realpath(__DIR__.'/../../../../');
+}
 
 if(!$appDirectory || $showHelp) {
     echo $usageHelp;
