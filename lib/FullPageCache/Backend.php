@@ -6,27 +6,7 @@ use Webframework\Request\Request;
 class Backend {
 
 	/**
-	 * @var string
-	 */
-	protected $redisHost;
-
-	/**
-	 * @var string
-	 */
-	protected $redisPort;
-
-	/**
-	 * @var string
-	 */
-	protected $redisAuth;
-
-	/**
-	 * @var float
-	 */
-	protected $redisTimeout;
-
-	/**
-	 * @var \Credis_Client
+	 * @var BackendRedisConnection
 	 */
 	protected $redisConnection;
 
@@ -50,33 +30,17 @@ class Backend {
 
     /**
      * Backend constructor.
-     * @param string $redisHost
-     * @param int $redisPort
-     * @param float $redisTimeout
-     * @param string|null $redisAuth
+     * @param BackendRedisConnection $redisConnection
      * @param int $bzCompressionLevel
      * @param int $minCompressionByteSize
      */
-	public function __construct(string $redisHost = '127.0.0.1', int $redisPort = 6379, float $redisTimeout = 1.0, string $redisAuth = null, int $bzCompressionLevel = 7, int $minCompressionByteSize = 2048) {
+	public function __construct(BackendRedisConnection $redisConnection, int $bzCompressionLevel = 7, int $minCompressionByteSize = 2048) {
 
-		$this->redisHost = $redisHost;
-		$this->redisPort = $redisPort;
-		$this->redisAuth = $redisAuth;
-		$this->redisTimeout = $redisTimeout;
+		$this->redisConnection = $redisConnection;
+
 		$this->jsonOptions = JSON_UNESCAPED_SLASHES;
-
 		$this->bzCompressionLevel = $bzCompressionLevel;
 		$this->minCompressionByteSize = $minCompressionByteSize;
-	}
-
-	/**
-	 * @return \Credis_Client
-	 */
-	protected function getConnection(): \Credis_Client {
-		if(!$this->redisConnection) {
-			$this->redisConnection = new \Credis_Client($this->redisHost, $this->redisPort, $this->redisTimeout, '', 0, $this->redisAuth);
-		}
-		return $this->redisConnection;
 	}
 
 	/**
@@ -85,15 +49,14 @@ class Backend {
 	 */
 	public function getPage(string $requestKey): ?Page {
 		try {
-			$connection = $this->getConnection();
 			$pageCacheKey = self::CACHE_KEY_PAGE_.$requestKey;
 
-			$pageData = $connection->get($pageCacheKey);
+			$pageData = $this->redisConnection->get($pageCacheKey);
 			if(!$pageData) {
 				return null;
 			}
 
-			$pageMetaDataJson = $connection->hGet(self::CACHE_KEY_LIST, $requestKey);
+			$pageMetaDataJson = $this->redisConnection->hGet(self::CACHE_KEY_LIST, $requestKey);
 			if(!$pageMetaDataJson) {
 				return null;
 			}
@@ -134,7 +97,6 @@ class Backend {
 	 */
 	public function registerPage(Request $request, $pageKey, $refreshInterval, array $responseHeaders): void {
 		try {
-			$connection = $this->getConnection();
 			$requestKey = $this->getRequestKey($request);
 
 			$queueData = new \stdClass();
@@ -150,7 +112,7 @@ class Backend {
 			 * Adds all the specified members with the specified scores to the sorted set stored at key.
 			 * If a specified member is already a member of the sorted set, the score is updated and the element reinserted at the right position to ensure the correct ordering.
 			 */
-			$connection->zAdd(self::CACHE_KEY_QUEUE, 0, $requestKey);
+            $this->redisConnection->zAdd(self::CACHE_KEY_QUEUE, 0, $requestKey);
 
 			/**
 			 * Sets field in the hash stored at key to value, only if field does not yet exist.
@@ -158,7 +120,7 @@ class Backend {
 			 * If field already exists, this operation has no effect.
 			 * https://redis.io/commands/hsetnx
 			 */
-			$connection->hSetNx(self::CACHE_KEY_LIST, $requestKey, $queueDataJson);
+            $this->redisConnection->hSetNx(self::CACHE_KEY_LIST, $requestKey, $queueDataJson);
 
 		} catch(\Exception $e) {
 			error_log((string)$e);
@@ -173,8 +135,6 @@ class Backend {
 	 */
 	public function storePage($requestKey, $refreshInterval, $expireInterval, $responseBody): void {
 		try {
-			$connection = $this->getConnection();
-
 			/**
 			 * Sets field in the hash stored at key to value, only if field does not yet exist.
 			 * If key does not exist, a new key holding a hash is created.
@@ -191,9 +151,9 @@ class Backend {
 				}
 			}
 
-			$connection->set($cacheKey, $storeResponseBody);
-			$connection->expire($cacheKey, $refreshInterval+$expireInterval);
-			$connection->zAdd(self::CACHE_KEY_QUEUE, time()+$refreshInterval, $requestKey);
+            $this->redisConnection->set($cacheKey, $storeResponseBody);
+            $this->redisConnection->expire($cacheKey, $refreshInterval+$expireInterval);
+            $this->redisConnection->zAdd(self::CACHE_KEY_QUEUE, time()+$refreshInterval, $requestKey);
 
 		} catch(\Exception $e) {
 			error_log((string)$e);
@@ -205,8 +165,6 @@ class Backend {
 	 */
 	public function removePage(string $requestKey): void {
 		try {
-			$connection = $this->getConnection();
-
 			/**
 			 * Sets field in the hash stored at key to value, only if field does not yet exist.
 			 * If key does not exist, a new key holding a hash is created.
@@ -215,9 +173,9 @@ class Backend {
 			 */
 			$cacheKey = self::CACHE_KEY_PAGE_.$requestKey;
 
-			$connection->del($cacheKey);
-			$connection->hDel(self::CACHE_KEY_LIST, $requestKey);
-			$connection->zRem(self::CACHE_KEY_QUEUE, $requestKey);
+            $this->redisConnection->del($cacheKey);
+            $this->redisConnection->hDel(self::CACHE_KEY_LIST, $requestKey);
+            $this->redisConnection->zRem(self::CACHE_KEY_QUEUE, $requestKey);
 
 		} catch(\Exception $e) {
 			error_log((string)$e);
@@ -229,8 +187,7 @@ class Backend {
 	 */
 	public function getPagesToRefresh(): array {
 		try {
-			$connection = $this->getConnection();
-			$pageList = $connection->zRangeByScore(self::CACHE_KEY_QUEUE, 0, time());
+			$pageList = $this->redisConnection->zRangeByScore(self::CACHE_KEY_QUEUE, 0, time());
 			if(is_array($pageList)) {
 				return $pageList;
 			}
@@ -249,8 +206,7 @@ class Backend {
 			return array();
 		}
 		try {
-			$connection = $this->getConnection();
-			$pagesMetaDataJson = $connection->hMGet(self::CACHE_KEY_LIST, $requestKeys);
+			$pagesMetaDataJson = $this->redisConnection->hMGet(self::CACHE_KEY_LIST, $requestKeys);
 			if(is_array($pagesMetaDataJson)) {
 				$pages = array();
 				foreach($pagesMetaDataJson as $pageMetaDataJson) {
@@ -272,8 +228,7 @@ class Backend {
 	 */
 	public function flush(): void {
 		try {
-			$connection = $this->getConnection();
-			$connection->flushAll();
+            $this->redisConnection->flushAll();
 		} catch(\Exception $e) {
 			error_log((string)$e);
 		}
@@ -284,10 +239,9 @@ class Backend {
 	 */
 	public function refreshAll(): void {
 		try {
-			$connection = $this->getConnection();
-			$keys = $connection->hKeys(self::CACHE_KEY_LIST);
+			$keys = $this->redisConnection->hKeys(self::CACHE_KEY_LIST);
 			foreach($keys as $key) {
-				$connection->zAdd(self::CACHE_KEY_QUEUE, 0, $key);
+                $this->redisConnection->zAdd(self::CACHE_KEY_QUEUE, 0, $key);
 			}
 		} catch(\Exception $e) {
 			error_log((string)$e);
@@ -299,12 +253,10 @@ class Backend {
 	 */
 	public function getStats(): ?BackendStats {
 		try {
-			$connection = $this->getConnection();
-
-			$memorySection = $connection->info('memory');
+			$memorySection = $this->redisConnection->info('memory');
 			$memory = intval($memorySection['used_memory']);
 
-			$keys = $connection->hKeys(self::CACHE_KEY_LIST);
+			$keys = $this->redisConnection->hKeys(self::CACHE_KEY_LIST);
 
 			$stats = new BackendStats(count($keys), $memory);
 			return $stats;

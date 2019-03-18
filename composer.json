@@ -29,8 +29,8 @@
     },
     "repositories": [
         {
-            "type": "path",
-            "url": "../webframework"
+            "type": "vcs",
+            "url": "git@github.com:ludwig-gramberg/webframework.git"
         }
     ],
     "bin": [
