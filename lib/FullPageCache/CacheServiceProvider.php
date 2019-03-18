@@ -21,17 +21,6 @@ class CacheServiceProvider implements ProviderInterface {
                 }
 
                 return $config;
-
-            case 'FullPageCache\\Backend' :
-
-                $redisHost = $settings['redis_host'];
-                $redisPort = $settings['redis_port'];
-                $redisTimeout = $settings['redis_timeout_ms']/1000;
-                $redisAuth = array_key_exists('redis_auth', $settings) ? $settings['redis_auth'] : null;
-
-                $backend = new Backend($redisHost, $redisPort, $redisTimeout, $redisAuth);
-
-                return $backend;
         }
         return null;
     }
