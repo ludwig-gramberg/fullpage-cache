@@ -2,7 +2,7 @@
     "name": "ludwig-gramberg/fullpage-cache",
     "description": "Fullpage Cache",
     "type": "library",
-    "license": "proprietary",
+    "license": "MIT",
     "homepage": "https://www.ludwig-gramberg.de/",
     "authors": [
         {
