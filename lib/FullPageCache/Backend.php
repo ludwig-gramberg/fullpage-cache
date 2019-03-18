@@ -13,17 +13,17 @@ class Backend {
 	/**
 	 * @var int
 	 */
-	protected $bzCompressionLevel;
+	protected $bzCompressionLevel = 7;
 
 	/**
 	 * @var int
 	 */
-	protected $minCompressionByteSize;
+	protected $minCompressionByteSize = 2048;
 
 	/**
 	 * @var int
 	 */
-	protected $jsonOptions;
+	protected $jsonOptions = JSON_UNESCAPED_SLASHES;
 
 	const COMPRESSION_TYPE_GZIP = 'gz';
 	const COMPRESSION_TYPE_NONE = 'rv';
@@ -31,16 +31,9 @@ class Backend {
     /**
      * Backend constructor.
      * @param BackendRedisConnection $redisConnection
-     * @param int $bzCompressionLevel
-     * @param int $minCompressionByteSize
      */
-	public function __construct(BackendRedisConnection $redisConnection, int $bzCompressionLevel = 7, int $minCompressionByteSize = 2048) {
-
+	public function __construct(BackendRedisConnection $redisConnection) {
 		$this->redisConnection = $redisConnection;
-
-		$this->jsonOptions = JSON_UNESCAPED_SLASHES;
-		$this->bzCompressionLevel = $bzCompressionLevel;
-		$this->minCompressionByteSize = $minCompressionByteSize;
 	}
 
 	/**
