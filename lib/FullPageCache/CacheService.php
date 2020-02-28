@@ -183,4 +183,11 @@ class CacheService {
     public function getConfig(): Config {
         return $this->config;
     }
+
+    /**
+     * @return bool
+     */
+    public function isCacheClient(): bool {
+        return $this->isCacheClient;
+    }
 }
