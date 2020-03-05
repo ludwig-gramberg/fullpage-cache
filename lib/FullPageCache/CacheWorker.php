@@ -125,6 +125,14 @@ class CacheWorker extends AbstractWorker {
 					$curlDebug
 				) = $result;
 
+				if($httpStatus == 400 || $httpStatus == 405 || $httpStatus == 403) {
+					// remove page from list for these statuses but also log as error
+					error_log('cache fetch for '.$requestKey.' failed: '.$httpStatus.', error: '.$curlError.'('.$curlErrno.'), info: '.print_r($curlDebug, true));
+					error_log('remove from cache '.$requestKey.' response: '.$httpStatus);
+					$this->backend->removePage($requestKey);
+					continue;
+                }
+				
 				if($httpStatus == 404 || $httpStatus == 410 || $httpStatus == 301 || $httpStatus == 302) {
 					// remove page from list for these statuses
 					error_log('remove from cache '.$requestKey.' response: '.$httpStatus);
