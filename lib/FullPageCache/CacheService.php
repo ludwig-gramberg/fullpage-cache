@@ -170,6 +170,18 @@ class CacheService {
 		$this->backend->refreshAll();
 	}
 
+    /**
+     * @param string $absoluteUri
+     */
+    public function refreshPageByUri(string $absoluteUri): void {
+        $absoluteUri = strtolower($absoluteUri);
+        $scheme = parse_url($absoluteUri, PHP_URL_SCHEME);
+        $host = parse_url($absoluteUri, PHP_URL_HOST);
+        $path = parse_url($absoluteUri, PHP_URL_PATH);
+        $requestKey = $scheme.'_'.$host.'_'.str_replace('/', '-', trim($path, '/'));
+        $this->backend->refreshPage($requestKey);
+    }
+
 	/**
 	 * @return BackendStats|null
 	 */

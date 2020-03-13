@@ -241,6 +241,21 @@ class Backend {
 		}
 	}
 
+    /**
+     * refresh this page
+     */
+    public function refreshPage(string $requestKey): void {
+        try {
+            $page = $this->getPage($requestKey);
+            if(!$page) {
+                return;
+            }
+            $this->redisConnection->zAdd(self::CACHE_KEY_QUEUE, 0, $requestKey);
+        } catch(\Exception $e) {
+            error_log((string)$e);
+        }
+    }
+
 	/**
 	 * @return BackendStats|null
 	 */
