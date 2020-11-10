@@ -146,7 +146,13 @@ class CacheService {
 	 * @param array $responseHeaders
 	 */
 	public function registerPage($pageKey, $refreshInterval = null, array $responseHeaders = null): void {
-
+        if(!in_array($this->request->getHost(), $this->config->getDomains())) {
+            return;
+        }
+        if(!in_array($this->request->getScheme(), $this->config->getSchemes())) {
+            return;
+        }
+	    
 		$refreshInterval = $refreshInterval ? $refreshInterval : $this->config->getDefaultRefreshInterval();
 		$responseHeaders = $responseHeaders ? $responseHeaders : $this->config->getDefaultResponseHeaders();
 
