@@ -36,6 +36,10 @@ if(!$appDirectory || $showHelp) {
 }
 
 require_once $appDirectory.'/vendor/ludwig-gramberg/webframework/bin/wf-cli-bootstrap.php';
+/* @var string $composerAutoloadFile */
+/* @var string $cli_color */
+/* @var string $cli_color_green */
+/* @var string $cli_color_red */
 
 try {
     echo PHP_EOL;
@@ -44,11 +48,11 @@ try {
 
     // ini files and settings
 
-    $pathIniApplication = APP_PATH.'config/application.ini';
-    $pathIniCli = APP_PATH.'config/cli.ini';
-    $pathIniResources = APP_PATH.'config/resources.ini';
-
-    $settings = new Settings([$pathIniApplication, $pathIniCli, $pathIniResources]);
+    $settings = new Settings([
+        APP_PATH.'vendor/ludwig-gramberg/webframework/config/application.ini',
+        APP_PATH.'config/application.ini',
+        APP_PATH.'config/resources.ini',
+    ]);
     $di = new DependencyManager($settings);
 
     // prep worker
