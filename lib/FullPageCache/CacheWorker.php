@@ -8,61 +8,30 @@ class CacheWorker extends AbstractWorker {
 
     const USER_AGENT = 'fullpage-cache-refresh-worker';
 
-	/**
-	 * @var Backend
-	 */
-    protected $backend;
+    protected Backend $backend;
 
-	/**
-	 * @var Config
-	 */
-    protected $config;
+    protected Config $config;
 
-	/**
-	 * @var int
-	 */
-    protected $parallelRequests = 8;
+    protected int $parallelRequests = 8;
 
-	/**
-	 * @var int
-	 */
-    protected $parallelRequestsChunkSize = 32;
+    protected int $parallelRequestsChunkSize = 32;
 
-	/**
-	 * @var int
-	 */
-    protected $expireInterval;
+    protected int $expireInterval;
 
-	/**
-	 * @var resource
-	 */
+    /**
+     * @var resource
+     */
     protected $multiCurl;
 
-    /**
-     * @var File
-     */
-    protected $deploymentHashFile;
+    protected ?File $deploymentHashFile = null;
 
-    /**
-     * @var string
-     */
-    protected $deploymentHash;
+    protected ?string $deploymentHash = null;
 
-	/**
-	 * CacheRefresh constructor.
-	 *
-	 * @param Config $config
-     * @param Backend $backend
-	 * @param string $name
-	 * @param float $workInterval
-	 * @param File|null $deploymentHashFile
-	 * @param null $memoryLimit
-	 * @param null $timeLimit
-	 */
 	public function __construct(Config $config, Backend $backend, string $name, float $workInterval, File $deploymentHashFile = null, $memoryLimit = null, $timeLimit = null) {
 		$this->config = $config;
 		$this->backend = $backend;
 		$this->expireInterval = $this->config->getExpireInterval();
+        $this->deploymentHashFile = $deploymentHashFile;
 		parent::__construct($name, $workInterval, $memoryLimit, $timeLimit);
 	}
 
@@ -73,7 +42,7 @@ class CacheWorker extends AbstractWorker {
 	    if(!$this->deploymentHashFile) {
 	        return false;
         }
-        // intial hash read
+        // initial hash read
         if($this->deploymentHash === null) {
             $this->deploymentHash = $this->deploymentHashFile->getContent();
         }
@@ -104,7 +73,7 @@ class CacheWorker extends AbstractWorker {
 		// fetch metadata for pages
 	    $pagesMetaData = $this->backend->getPagesMetaData($requestKeys);
 
-		$requests = array();
+		$requests = [];
 		foreach($pagesMetaData as $pageMetaData) {
 			$requests[$pageMetaData->requestKey] = $pageMetaData->url;
 		}
@@ -159,10 +128,10 @@ class CacheWorker extends AbstractWorker {
 	 */
     protected function fetch(array $requests) {
 	    if(empty($requests)) {
-	    	return array();
+	    	return [];
 	    }
 
-	    $handles = array();
+	    $handles = [];
 	    $fetchTimeout = $this->config->getCacheClientFetchTimeout();
 	    $ignoreSslErrors = $this->config->isCacheClientIgnoreSslErrors();
 
@@ -176,7 +145,7 @@ class CacheWorker extends AbstractWorker {
 			    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
 			    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 			}
-		    $handles[$request] = array($ch, $p);
+		    $handles[$request] = [$ch, $p];
 	    }
 
 	    $i=0;
@@ -197,22 +166,24 @@ class CacheWorker extends AbstractWorker {
 		    } while ($running > 0);
 	    }
 
-	    foreach($handles as $request => $set) {
+        $results = [];
+        
+	    foreach($handles as $set) {
 		    list($ch, $p) = $set;
 
 		    $returnData = curl_multi_getcontent($ch);
 		    $httpStatus = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
 			$curlErrno = curl_errno($ch);
 			$curlError = curl_error($ch);
-			$curlDebug = $curlErrno == CURLE_OK ? array() : curl_getinfo($ch);
+			$curlDebug = $curlErrno == CURLE_OK ? [] : curl_getinfo($ch);
 
-		    $result = array(
+		    $result = [
 			    $httpStatus,
 			    $returnData,
 			    $curlErrno,
 				$curlError,
 			    $curlDebug
-		    );
+            ];
 		    $results[$p] = $result;
 		    curl_multi_remove_handle($this->multiCurl, $ch);
 	    }

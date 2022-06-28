@@ -32,8 +32,13 @@ class CacheServiceProvider implements ProviderInterface {
                 
                 $config = new Config($domains, $schemes, $defaultRefreshInterval, $expireInterval, $cacheClientFetchTimeout);
 
+                // flags
+                
                 if(array_key_exists('ignore_ssl_errors', $settings) && $settings['ignore_ssl_errors']) {
                     $config->setCacheClientIgnoreSslErrors(true);
+                }
+                if(array_key_exists('canonical_trailing_slash', $settings) && $settings['canonical_trailing_slash']) {
+                    $config->setCanonicalHasTrailingSlash(true);
                 }
 
                 return $config;

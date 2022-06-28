@@ -5,37 +5,16 @@ use Webframework\Request\Request;
 
 class CacheService {
 
-	/**
-	 * @var Config
-	 */
-	protected $config;
+	protected Config $config;
 
-	/**
-	 * @var Backend
-	 */
-	protected $backend;
+	protected Backend $backend;
 
-	/**
-	 * @var Request
-	 */
-	protected $request;
+	protected Request $request;
 
-	/**
-	 * @var bool
-	 */
-	protected $isCacheClient;
+	protected bool $isCacheClient;
 
-	/**
-	 * @var array
-	 */
-	protected $renderTags;
+	protected ?array $renderTags = null;
 
-    /**
-     * CacheService constructor.
-     * @param Config $config
-     * @param Backend $backend
-     * @param Request $request
-     */
 	public function __construct(Config $config, Backend $backend, Request $request) {
 	    $this->request = $request;
 		$this->config = $config;
@@ -43,9 +22,6 @@ class CacheService {
 		$this->isCacheClient = $this->request->getUserAgent() == CacheWorker::USER_AGENT;
 	}
 
-	/**
-	 * @return Page|null
-	 */
 	public function run(): ?Page {
 
 	    // do not trigger for cache worker
@@ -92,9 +68,6 @@ class CacheService {
 		return $page;
 	}
 
-    /**
-     * @return bool
-     */
 	protected function shouldRenderTag(string $tag): bool {
 	    if($this->renderTags === null) {
             $this->renderTags = $this->config->hasProcessTagsCallback()
@@ -104,9 +77,6 @@ class CacheService {
         return in_array($tag, $this->renderTags);
     }
 
-	/**
-	 * @param Page $page
-	 */
 	protected function renderTags(Page $page): void {
 		$body = $page->getBody();
 		preg_match_all('/\<!\-\-FPC:(.+)\-\-\>/U', $body, $m);
@@ -121,11 +91,7 @@ class CacheService {
 		$page->setBody($body);
 	}
 
-	/**
-	 * @param string $tag
-	 * @param callable $contentCallback
-	 */
-	public function renderTag($tag, callable $contentCallback): void {
+	public function renderTag(string $tag, callable $contentCallback): void {
 		$renderContent = $this->isCacheClient || $this->shouldRenderTag($tag);
 		if($this->isCacheClient) {
 			echo '<!--FPC:'.$tag.'-->';
@@ -140,12 +106,8 @@ class CacheService {
 
 	/**
 	 * registers a page to be handled by the cache
-	 *
-	 * @param string $pageKey
-	 * @param int $refreshInterval
-	 * @param array $responseHeaders
 	 */
-	public function registerPage($pageKey, $refreshInterval = null, array $responseHeaders = null): void {
+	public function registerPage(string $pageKey, int $refreshInterval = null, array $responseHeaders = null): void {
         if(!in_array($this->request->getHost(), $this->config->getDomains())) {
             return;
         }
@@ -153,19 +115,14 @@ class CacheService {
             return;
         }
 	    
-		$refreshInterval = $refreshInterval ? $refreshInterval : $this->config->getDefaultRefreshInterval();
-		$responseHeaders = $responseHeaders ? $responseHeaders : $this->config->getDefaultResponseHeaders();
+		$refreshInterval = $refreshInterval ?: $this->config->getDefaultRefreshInterval();
+		$responseHeaders = $responseHeaders ?: $this->config->getDefaultResponseHeaders();
 
-		$this->backend->registerPage($this->request, $pageKey, $refreshInterval, $responseHeaders);
+		$this->backend->registerPage($this->request, $pageKey, $refreshInterval, $responseHeaders, $this->config->isCanonicalHasTrailingSlash());
 	}
 
-	/**
-	 * @return array
-	 */
 	public function getPagesToRefresh(): array {
-		$expireInterval = $this->config->getExpireInterval();
-		$pageList = $this->backend->getPagesToRefresh($expireInterval);
-		return $pageList;
+		return $this->backend->getPagesToRefresh();
 	}
 
 	public function flush(): void {
@@ -176,35 +133,14 @@ class CacheService {
 		$this->backend->refreshAll();
 	}
 
-    /**
-     * @param string $absoluteUri
-     */
-    public function refreshPageByUri(string $absoluteUri): void {
-        $absoluteUri = strtolower($absoluteUri);
-        $scheme = parse_url($absoluteUri, PHP_URL_SCHEME);
-        $host = parse_url($absoluteUri, PHP_URL_HOST);
-        $path = parse_url($absoluteUri, PHP_URL_PATH);
-        $requestKey = $scheme.'_'.$host.'_'.str_replace('/', '-', trim($path, '/'));
-        $this->backend->refreshPage($requestKey);
-    }
-
-	/**
-	 * @return BackendStats|null
-	 */
 	public function getStats(): ?BackendStats {
 		return $this->backend->getStats();
 	}
 
-    /**
-     * @return Config
-     */
     public function getConfig(): Config {
         return $this->config;
     }
 
-    /**
-     * @return bool
-     */
     public function isCacheClient(): bool {
         return $this->isCacheClient;
     }

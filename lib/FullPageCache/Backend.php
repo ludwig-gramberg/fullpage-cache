@@ -5,41 +5,21 @@ use Webframework\Request\Request;
 
 class Backend {
 
-	/**
-	 * @var BackendRedisConnection
-	 */
-	protected $redisConnection;
+	protected BackendRedisConnection $redisConnection;
 
-	/**
-	 * @var int
-	 */
-	protected $bzCompressionLevel = 7;
+	protected int $bzCompressionLevel = 7;
 
-	/**
-	 * @var int
-	 */
-	protected $minCompressionByteSize = 2048;
+	protected int $minCompressionByteSize = 2048;
 
-	/**
-	 * @var int
-	 */
-	protected $jsonOptions = JSON_UNESCAPED_SLASHES;
+	protected int $jsonOptions = JSON_UNESCAPED_SLASHES;
 
 	const COMPRESSION_TYPE_GZIP = 'gz';
 	const COMPRESSION_TYPE_NONE = 'rv';
 
-    /**
-     * Backend constructor.
-     * @param BackendRedisConnection $redisConnection
-     */
 	public function __construct(BackendRedisConnection $redisConnection) {
 		$this->redisConnection = $redisConnection;
 	}
 
-	/**
-	 * @param string $requestKey
-	 * @return Page|null
-	 */
 	public function getPage(string $requestKey): ?Page {
 		try {
 			$pageCacheKey = self::CACHE_KEY_PAGE_.$requestKey;
@@ -82,18 +62,15 @@ class Backend {
 	const CACHE_KEY_QUEUE   = 'queue';
 	const CACHE_KEY_PAGE_   = 'page_';
 
-	/**
-	 * @param Request $request
-	 * @param string $pageKey
-	 * @param int $refreshInterval
-	 * @param array $responseHeaders
-	 */
-	public function registerPage(Request $request, $pageKey, $refreshInterval, array $responseHeaders): void {
+	public function registerPage(Request $request, string $pageKey, int $refreshInterval, array $responseHeaders, bool $canonicalHasTrailingSlash = false): void {
 		try {
 			$requestKey = $this->getRequestKey($request);
 
 			$queueData = new \stdClass();
 			$queueData->url = (string)$request;
+            if($canonicalHasTrailingSlash) {
+                $queueData->url = rtrim($queueData->url, '/').'/';
+            }
 			$queueData->refreshInterval = $refreshInterval;
 			$queueData->pageKey = $pageKey;
 			$queueData->requestKey = $requestKey;
@@ -120,13 +97,7 @@ class Backend {
 		}
 	}
 
-	/**
-	 * @param string $requestKey
-	 * @param int $refreshInterval
-	 * @param int $expireInterval
-	 * @param string $responseBody
-	 */
-	public function storePage($requestKey, $refreshInterval, $expireInterval, $responseBody): void {
+	public function storePage(string $requestKey, int $refreshInterval, int $expireInterval, string $responseBody): void {
 		try {
 			/**
 			 * Sets field in the hash stored at key to value, only if field does not yet exist.
@@ -153,9 +124,6 @@ class Backend {
 		}
 	}
 
-	/**
-	 * @param string $requestKey
-	 */
 	public function removePage(string $requestKey): void {
 		try {
 			/**
@@ -175,9 +143,6 @@ class Backend {
 		}
 	}
 
-	/**
-	 * @return array
-	 */
 	public function getPagesToRefresh(): array {
 		try {
 			$pageList = $this->redisConnection->zRangeByScore(self::CACHE_KEY_QUEUE, 0, time());
@@ -187,16 +152,12 @@ class Backend {
 		} catch(\Exception $e) {
 			error_log((string)$e);
 		}
-		return array();
+		return [];
 	}
 
-	/**
-	 * @param array $requestKeys
-	 * @return array
-	 */
 	public function getPagesMetaData(array $requestKeys): array {
 		if(empty($requestKeys)) {
-			return array();
+			return [];
 		}
 		try {
 			$pagesMetaDataJson = $this->redisConnection->hMGet(self::CACHE_KEY_LIST, $requestKeys);
@@ -213,12 +174,9 @@ class Backend {
 		} catch(\Exception $e) {
 			error_log((string)$e);
 		}
-		return array();
+		return [];
 	}
 
-	/**
-	 * flush entire cache
-	 */
 	public function flush(): void {
 		try {
             $this->redisConnection->flushAll();
@@ -227,9 +185,6 @@ class Backend {
 		}
 	}
 
-	/**
-	 * set all pages to be refreshed by the cache worker
-	 */
 	public function refreshAll(): void {
 		try {
 			$keys = $this->redisConnection->hKeys(self::CACHE_KEY_LIST);
@@ -241,9 +196,6 @@ class Backend {
 		}
 	}
 
-    /**
-     * refresh this page
-     */
     public function refreshPage(string $requestKey): void {
         try {
             $page = $this->getPage($requestKey);
@@ -256,9 +208,6 @@ class Backend {
         }
     }
 
-	/**
-	 * @return BackendStats|null
-	 */
 	public function getStats(): ?BackendStats {
 		try {
 			$memorySection = $this->redisConnection->info('memory');
@@ -275,12 +224,8 @@ class Backend {
 		return null;
 	}
 
-    /**
-     * example: https_www.domain.com_my-path-xyz
-     * @return string
-     */
     public function getRequestKey(Request $request): string {
-        $requestKey = array();
+        $requestKey = [];
         $requestKey[] = $request->getScheme();
         $requestKey[] = $request->getHost();
         $requestKey[] = str_replace('/', '-', trim($request->getRequestPathFlat(), '/'));
