@@ -55,17 +55,17 @@ class CacheWorker extends AbstractWorker {
         return false;
     }
 
-    protected function init() {
+    protected function init(): void {
 		$this->multiCurl = curl_multi_init();
 	}
 
-	public function shutdown() {
+	public function shutdown(): void {
 		if($this->multiCurl) {
 			curl_multi_close($this->multiCurl);
 		}
 	}
 
-	protected function work() {
+	protected function work(): void {
 
 		// fetch list from backend
 	    $requestKeys = $this->backend->getPagesToRefresh();

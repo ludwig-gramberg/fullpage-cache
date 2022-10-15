@@ -165,7 +165,7 @@ class Backend {
 				$pages = array();
 				foreach($pagesMetaDataJson as $pageMetaDataJson) {
 					$pageMetaData = json_decode($pageMetaDataJson);
-					if($pageMetaData && $pageMetaData instanceof \stdClass) {
+					if($pageMetaData instanceof \stdClass) {
 						$pages[$pageMetaData->requestKey] = $pageMetaData;
 					}
 				}
