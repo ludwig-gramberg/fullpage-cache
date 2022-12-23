@@ -19,7 +19,7 @@
         "ext-pdo" : "*",
         "ext-curl" : "*",
         "ext-zlib" : "*",
-        "ludwig-gramberg/webframework" : "dev-master",
+        "ludwig-gramberg/webframework" : "1.x",
         "colinmollenhour/credis" : "1.x"
     },
     "autoload": {
