@@ -36,9 +36,9 @@ class Page {
 	}
 
 	public function sendResponse(): void {
-		header('X-FPC-Key:'.$this->key, true);
+		header('X-FPC-Key:'.$this->key);
 		foreach($this->headers as $header) {
-			header($header, true);
+			header($header);
 		}
 		echo $this->body;
 	}

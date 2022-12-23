@@ -2,6 +2,7 @@
 namespace FullPageCache;
 
 use Webframework\FileSystem\File;
+use Webframework\Service\Log\LogService;
 use Webframework\Worker\AbstractWorker;
 
 class CacheWorker extends AbstractWorker {
@@ -26,12 +27,24 @@ class CacheWorker extends AbstractWorker {
     protected ?File $deploymentHashFile = null;
 
     protected ?string $deploymentHash = null;
+    
+    protected ?LogService $logService = null;
 
-	public function __construct(Config $config, Backend $backend, string $name, float $workInterval, File $deploymentHashFile = null, $memoryLimit = null, $timeLimit = null) {
+	public function __construct(
+        Config $config, 
+        Backend $backend, 
+        string $name, 
+        float $workInterval, 
+        File $deploymentHashFile = null, 
+        $memoryLimit = null, 
+        $timeLimit = null, 
+        LogService $logService = null
+    ) {
 		$this->config = $config;
 		$this->backend = $backend;
 		$this->expireInterval = $this->config->getExpireInterval();
         $this->deploymentHashFile = $deploymentHashFile;
+        $this->logService = $logService;
 		parent::__construct($name, $workInterval, $memoryLimit, $timeLimit);
 	}
 
@@ -86,31 +99,31 @@ class CacheWorker extends AbstractWorker {
 			$results = $this->fetch($chunkOfRequests);
 
 			foreach($results as $requestKey => $result) {
-				list(
+				[
 					$httpStatus,
 					$returnData,
 					$curlErrno,
 					$curlError,
 					$curlDebug
-				) = $result;
+				] = $result;
 
 				if($httpStatus == 400 || $httpStatus == 405 || $httpStatus == 403) {
 					// remove page from list for these statuses but also log as error
-					error_log('cache fetch for '.$requestKey.' failed: '.$httpStatus.', error: '.$curlError.'('.$curlErrno.'), info: '.print_r($curlDebug, true));
-					error_log('remove from cache '.$requestKey.' response: '.$httpStatus);
+					$this->log('cache fetch for '.$requestKey.' failed: '.$httpStatus.', error: '.$curlError.'('.$curlErrno.'), info: '.print_r($curlDebug, true));
+					$this->log('remove from cache '.$requestKey.' response: '.$httpStatus);
 					$this->backend->removePage($requestKey);
 					continue;
                 }
 				
 				if($httpStatus == 404 || $httpStatus == 410 || $httpStatus == 301 || $httpStatus == 302) {
 					// remove page from list for these statuses
-					error_log('remove from cache '.$requestKey.' response: '.$httpStatus);
+					$this->log('remove from cache '.$requestKey.' response: '.$httpStatus);
 					$this->backend->removePage($requestKey);
 					continue;
 				}
 
 				if($httpStatus <> 200 || $curlErrno != CURLE_OK) {
-					error_log('cache fetch for '.$requestKey.' failed: '.$httpStatus.', error: '.$curlError.'('.$curlErrno.'), info: '.print_r($curlDebug, true));
+					$this->log('cache fetch for '.$requestKey.' failed: '.$httpStatus.', error: '.$curlError.'('.$curlErrno.'), info: '.print_r($curlDebug, true));
 					continue;
 				}
 				$pageMetaData = array_key_exists($requestKey, $pagesMetaData) ? $pagesMetaData[$requestKey] : null;
@@ -122,11 +135,7 @@ class CacheWorker extends AbstractWorker {
 		}
     }
 
-	/**
-	 * @param array $requests
-	 * @return array
-	 */
-    protected function fetch(array $requests) {
+    protected function fetch(array $requests): array {
 	    if(empty($requests)) {
 	    	return [];
 	    }
@@ -154,7 +163,7 @@ class CacheWorker extends AbstractWorker {
 	    while($i<$requestLength) {
 		    for($h=0;$h<$this->parallelRequests;$h++) {
 			    if($i<$requestLength) {
-				    list($ch, ) = $handles[$requests[$keys[$i]]];
+				    [$ch, ] = $handles[$requests[$keys[$i]]];
 				    curl_multi_add_handle($this->multiCurl, $ch);
 				    $i++;
 			    }
@@ -169,7 +178,7 @@ class CacheWorker extends AbstractWorker {
         $results = [];
         
 	    foreach($handles as $set) {
-		    list($ch, $p) = $set;
+		    [$ch, $p] = $set;
 
 		    $returnData = curl_multi_getcontent($ch);
 		    $httpStatus = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -189,5 +198,11 @@ class CacheWorker extends AbstractWorker {
 	    }
 
 	    return $results;
+    }
+    
+    protected function log(string $text): void {
+        if($this->logService) {
+            $this->logService->log($text, 'fullpage-cache.log');
+        }
     }
 }

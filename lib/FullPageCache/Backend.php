@@ -1,7 +1,11 @@
 <?php
 namespace FullPageCache;
 
+use Exception;
+use stdClass;
+use Throwable;
 use Webframework\Request\Request;
+use Webframework\Util;
 
 class Backend {
 
@@ -34,7 +38,7 @@ class Backend {
 				return null;
 			}
 			$pageMetaData = json_decode($pageMetaDataJson);
-			if(!is_object($pageMetaData) || !($pageMetaData instanceof \stdClass)) {
+			if(!is_object($pageMetaData) || !($pageMetaData instanceof stdClass)) {
 				return null;
 			}
 
@@ -52,8 +56,8 @@ class Backend {
 			$page = new Page($pageMetaData->pageKey, $pageData, $pageMetaData->responseHeaders);
 			return $page;
 
-		} catch(\Exception $e) {
-			error_log((string)$e);
+		} catch(Throwable $t) {
+			Util::logError($t);
 		}
 		return null;
 	}
@@ -66,7 +70,7 @@ class Backend {
 		try {
 			$requestKey = $this->getRequestKey($request);
 
-			$queueData = new \stdClass();
+			$queueData = new stdClass();
 			$queueData->url = (string)$request;
             if($canonicalHasTrailingSlash) {
                 $queueData->url = rtrim($queueData->url, '/').'/';
@@ -92,8 +96,8 @@ class Backend {
 			 */
             $this->redisConnection->hSetNx(self::CACHE_KEY_LIST, $requestKey, $queueDataJson);
 
-		} catch(\Exception $e) {
-			error_log((string)$e);
+		} catch(Throwable $t) {
+            Util::logError($t);
 		}
 	}
 
@@ -119,9 +123,9 @@ class Backend {
             $this->redisConnection->expire($cacheKey, $refreshInterval+$expireInterval);
             $this->redisConnection->zAdd(self::CACHE_KEY_QUEUE, time()+$refreshInterval, $requestKey);
 
-		} catch(\Exception $e) {
-			error_log((string)$e);
-		}
+        } catch(Throwable $t) {
+            Util::logError($t);
+        }
 	}
 
 	public function removePage(string $requestKey): void {
@@ -138,9 +142,9 @@ class Backend {
             $this->redisConnection->hDel(self::CACHE_KEY_LIST, $requestKey);
             $this->redisConnection->zRem(self::CACHE_KEY_QUEUE, $requestKey);
 
-		} catch(\Exception $e) {
-			error_log((string)$e);
-		}
+        } catch(Throwable $t) {
+            Util::logError($t);
+        }
 	}
 
 	public function getPagesToRefresh(): array {
@@ -149,9 +153,9 @@ class Backend {
 			if(is_array($pageList)) {
 				return $pageList;
 			}
-		} catch(\Exception $e) {
-			error_log((string)$e);
-		}
+        } catch(Throwable $t) {
+            Util::logError($t);
+        }
 		return [];
 	}
 
@@ -165,24 +169,24 @@ class Backend {
 				$pages = array();
 				foreach($pagesMetaDataJson as $pageMetaDataJson) {
 					$pageMetaData = json_decode($pageMetaDataJson);
-					if($pageMetaData instanceof \stdClass) {
+					if($pageMetaData instanceof stdClass) {
 						$pages[$pageMetaData->requestKey] = $pageMetaData;
 					}
 				}
 				return $pages;
 			}
-		} catch(\Exception $e) {
-			error_log((string)$e);
-		}
+        } catch(Throwable $t) {
+            Util::logError($t);
+        }
 		return [];
 	}
 
 	public function flush(): void {
 		try {
             $this->redisConnection->flushAll();
-		} catch(\Exception $e) {
-			error_log((string)$e);
-		}
+        } catch(Throwable $t) {
+            Util::logError($t);
+        }
 	}
 
 	public function refreshAll(): void {
@@ -191,9 +195,9 @@ class Backend {
 			foreach($keys as $key) {
                 $this->redisConnection->zAdd(self::CACHE_KEY_QUEUE, 0, $key);
 			}
-		} catch(\Exception $e) {
-			error_log((string)$e);
-		}
+        } catch(Throwable $t) {
+            Util::logError($t);
+        }
 	}
 
     public function refreshPage(string $requestKey): void {
@@ -203,8 +207,8 @@ class Backend {
                 return;
             }
             $this->redisConnection->zAdd(self::CACHE_KEY_QUEUE, 0, $requestKey);
-        } catch(\Exception $e) {
-            error_log((string)$e);
+        } catch(Throwable $t) {
+            Util::logError($t);
         }
     }
 
@@ -218,9 +222,9 @@ class Backend {
 			$stats = new BackendStats(count($keys), $memory);
 			return $stats;
 
-		} catch(\Exception $e) {
-			error_log((string)$e);
-		}
+        } catch(Throwable $t) {
+            Util::logError($t);
+        }
 		return null;
 	}
 

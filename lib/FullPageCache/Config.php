@@ -1,6 +1,8 @@
 <?php
 namespace FullPageCache;
 
+use Closure;
+
 class Config {
 
 	protected int $defaultRefreshInterval;
@@ -26,11 +28,11 @@ class Config {
 
 	protected array $stateTags = [];
 
-	protected ?\Closure $useCacheCallback = null;
+	protected ?Closure $useCacheCallback = null;
 
-	protected ?\Closure $processTagsCallback = null;
+	protected ?Closure $processTagsCallback = null;
 
-	protected ?\Closure $postProcessCallback = null;
+	protected ?Closure $postProcessCallback = null;
 
 	public function __construct(array $domains, array $schemes, int $defaultRefreshInterval = 600, int $expireInterval = 600, int $cacheClientFetchTimeout = 30) {
 		$this->domains = $domains;

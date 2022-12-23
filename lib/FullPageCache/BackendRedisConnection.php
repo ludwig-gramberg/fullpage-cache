@@ -1,7 +1,9 @@
 <?php
 namespace FullPageCache;
 
-class BackendRedisConnection extends \Credis_Client {
+use Credis_Client;
+
+class BackendRedisConnection extends Credis_Client {
 
 
 

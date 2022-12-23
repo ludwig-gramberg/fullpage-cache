@@ -3,9 +3,12 @@ namespace FullPageCache;
 
 // options help
 
+use Closure;
+use Throwable;
 use Webframework\Application\DependencyManager;
 use Webframework\Application\Settings;
 use Webframework\FileSystem\File;
+use Webframework\Util;
 
 $usageHelp = <<<HELP
 
@@ -44,8 +47,9 @@ if($revisionFilePath && is_file($revisionFilePath)) {
 }
 
 require_once $appDirectory.'/vendor/ludwig-gramberg/webframework/bin/wf-cli-bootstrap.php';
+
 /* @var string $composerAutoloadFile */
-/* @var string $cli_color */
+/* @var Closure $cli_color */
 /* @var string $cli_color_green */
 /* @var string $cli_color_red */
 
@@ -72,9 +76,9 @@ try {
     $worker->run();
     $worker->shutdown();
 
-} catch(\Throwable $e) {
+} catch(Throwable $e) {
 
-    error_log((string)$e);
+    Util::logError($e);
 
     echo PHP_EOL;
     echo $cli_color('an error occured, see error log for further details', $cli_color_red);
